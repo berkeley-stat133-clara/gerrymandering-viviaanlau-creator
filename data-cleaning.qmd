@@ -3,3 +3,55 @@ title: Data Cleaning
 format: typst
 ---
 
+
+```{r}
+library(tidyverse)
+library(readxl)
+
+g24_prec_raw <- read_csv("data/g24_sov_by_g24_svprec.csv")
+
+glimpse(g24_prec_raw)
+
+sapply(g24_prec_raw, class)
+
+colSums(is.na(g24_prec_raw))
+
+g24_prec_raw <- g24_prec_raw  |>
+    filter(TOTREG != 0)
+    
+```
+
+
+```{r}
+library(sf)
+library(aweights)
+sr_votes <- read_csv("data/state_g24_sov_data_by_g24_srprec.csv")
+sr_votes
+
+sr_shp <- st_read("data/srprec_state_g24_v01_shp/srprec_state_g24_v01_shp.shp")
+sr_shp <- sr_shp |>
+    st_transform(3310) |>
+    st_set_precision(1) |>
+    st_make_valid() |>
+    st_collection_extract("POLYGON")
+sr_shp
+
+new_districts <- st_read("data/AB604/AB^)$.shp")
+new_districts <- st_transform(new_districts, crs = 3310)
+
+sr_geo <- sr_shp |>
+    left_join(sr_votes, by = c("SRPREC" = "SRPREC"))
+
+intersections <- st_intersection(sr_geo, new_districts)
+intersections <- intersections |>
+    mutate(
+        intersection_area = st_area(geometry),
+        precinct_area = st_area(st_geometry(sr_geo[match(SRPREC, sr_geo$SRPREC)])) |>
+            mutate(area_prop = as.numeric(intersection_area/precinct_area))
+    )
+
+interpolated_votes <- intersections |>
+    st_drop_geometr() |>
+    mutate(allocated_votes = votes * area_proportion)
+
+```
