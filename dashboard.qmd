@@ -3,3 +3,81 @@ title: Dashboard
 format: dashboard
 ---
 
+
+```{r}
+install.packages("leaflet")
+install.packages("plotly")
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(plotly)
+
+g24_prec_raw <- read_csv("data/g24_sov_by_g24_svprec.csv")
+sr_votes <- read_csv("data/state_g24_sov_data_by_g24_srprec.csv")
+sr_shp <- st_read("data/srprec_state_g24_v01_shp/srprec_state_g24_v01_shp.shp")
+new_districts <- st_read("data/AB604/AB^)$.shp")
+districts_2024_shp <- districts_2024_shp %>%
+  left_join(dist_2024, by = c("DISTRICT" = "District"))
+
+dem_2024 <- sum(dist_2024$Winner == "Democratic")
+valueBox(dem_2024, caption = "Democratic Seats (2024)", color = "primary")
+
+rep_2024 <- sum(dist_2024$Winner == "Republican")
+valueBox(rep_2024, caption = "Republican Seats (2024)", color = "danger")
+dem_ab604 <- sum(dist_ab604$Winner == "Democratic")
+change_dem <- dem_ab604 - dem_2024
+valueBox(
+  paste0(dem_ab604, " (", ifelse(change_dem > 0, "+", ""), change_dem, ")"),
+  caption = "Democratic Seats (AB 604)",
+  color = "primary"
+)
+
+rep_ab604 <- sum(dist_ab604$Winner == "Republican")
+change_rep <- rep_ab604 - rep_2024
+valueBox(
+  paste0(rep_ab604, " (", ifelse(change_rep > 0, "+", ""), change_rep, ")"),
+  caption = "Republican Seats (AB 604)",
+  color = "danger"
+)
+
+districts_2024_wgs84 <- st_transform(districts_2024, 4326)
+
+pal <- colorFactor(c("blue", "red"), domain = c("Democratic", "Republican"))
+
+leaflet(districts_2024_wgs84) %>%
+  addTiles() %>%
+  addPolygons(
+    fillColor = ~pal(Winner),
+    fillOpacity = 0.7,
+    color = "white",
+    weight = 1,
+    label = ~paste("District", District, "-", Winner)
+  )
+
+  districts_ab604_wgs84 <- st_transform(districts_ab604, 4326)
+
+leaflet(districts_ab604_wgs84) %>%
+  addTiles() %>%
+  addPolygons(
+    fillColor = ~pal(Winner),
+    fillOpacity = 0.7,
+    color = "white",
+    weight = 1,
+    label = ~paste("District", District, "-", Winner)
+  )
+
+  metrics_df <- tibble(
+  Metric = c("Mean-Median Score", "Efficiency Gap"),
+  `2024 Map` = c(mean_median_2024, eff_gap_2024),
+  `AB 604 Map` = c(mean_median_ab604, eff_gap_ab604),
+  Change = `AB 604 Map` - `2024 Map`
+)
+
+plot_ly(metrics_df, x = ~Metric, y = ~`2024 Map`, type = 'bar', name = '2024') %>%
+  add_trace(y = ~`AB 604 Map`, name = 'AB 604') %>%
+  layout(
+    title = "Gerrymandering Metrics",
+    yaxis = list(title = "Value"),
+    barmode = 'group'
+  )
+```
