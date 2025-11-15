@@ -1,0 +1,61 @@
+---
+title: Exploratory Data Analysis
+format: typst
+---
+
+### Question 1
+
+Which districts had the highest proportion of voters to registration counts?
+### Answer 1
+
+```{r}
+voters_prop <- g24_prec_raw |>
+    filter(TOTREG != 0) |>
+    filter(TOTVOTE != 0) |>
+    mutate(vote_over_reg = TOTVOTE/TOTREG) |>
+    select("SVPREC", "vote_over_reg") |>
+    arrange(desc(vote_over_reg)) |>
+    slice(1:5)
+
+voters_prop
+
+```
+
+### Question 2
+
+Which districts had the closest race?
+
+### Answer 2
+
+```{r}
+result_by_dist <- read_csv("data/g24-results-by-district.csv")
+result_by_dist <- na.omit(result_by_dist)
+colnames(result_by_dist) <- c("dist", "dem", "rep")
+result_by_dist <- result_by_dist |>
+    mutate(dem = as.numeric(str_replace_all(dem, ",", ""))) |>
+    mutate(rep = as.numeric(str_replace_all(rep, ",", "")))
+
+
+closest_race <- result_by_dist |>
+    mutate(diff = abs(dem - rep)) |>
+    filter(dist != "District Totals") |>
+    arrange(desc(diff)) |>
+    slice(1:10)
+
+closest_race
+
+
+```
+
+### Question 3
+
+What is the distribution of precinct sizes?
+### Answer 3
+
+```{r}
+by_county <- group_by(g24_prec_raw, COUNTY)
+precinct_size <- g24_prec_raw |>
+    summarize(by_county, total_reg = sum(TOTREG))
+
+precinct_size
+```

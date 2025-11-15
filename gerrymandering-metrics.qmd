@@ -1,0 +1,55 @@
+---
+title: Gerrymandering Metrics
+format: typst
+---
+
+### 2024 Election Results and the 2024 District Map
+
+```{r}
+result_by_dist
+
+mean_med <- result_by_dist |>
+    mutate(v_i = dem/(dem+rep)) |>
+    summarize(mean_v = mean(v_i),
+    med_v = median(v_i)) |>
+    mutate(mean_v = med_v)
+
+mean_med
+
+calculated_wasted_votes <- function(votes_a, votes_b) {
+    total <- votes_a + votes_b
+    votes_to_win <- floor(total / 2) + 1
+
+    if (votes_a > votes_b) {
+        wasted_a <- votes_a - votes_to_win
+    } else {
+        wasted_a <- votes_a
+    }
+    return(wasted_a)
+}
+
+district_results <- result_by_dist |>
+    mutate(
+        dem_waste = map2_dbl(dem, rep, calculated_wasted_votes),
+        rep_wasted = map2_dbl(rep, dem, calculate_wasted_votes)
+    )
+
+total_votes <- sum(district_results$total)
+dem_wasted <- sum(district_results$dem_waste)
+rep_waste <- sum(district_resutls$rep_wasted)
+
+efficiency_gap (dem_wasted - rep_wasted)/total_votes
+
+```
+
+### 2024 Election Results and the proposed 2025 District Map
+
+```{r}
+summary_2024 <- list(
+  dem_seats = sum(district_results$Winner == "Democratic"),
+  rep_seats = sum(district_results$Winner == "Republican"),
+  total_seats = nrow(district_results),
+  mean_median = mean_median_score,
+  efficiency_gap = efficiency_gap
+)
+```
